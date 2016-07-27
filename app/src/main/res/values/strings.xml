@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">DaggerKnifeDemo</string>
+
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+    <string name="butter">测试啊</string>
+</resources>
