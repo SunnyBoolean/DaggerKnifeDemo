@@ -1,5 +1,6 @@
 package deliver.geo.com.daggerknifedemo;
 
+import android.os.SystemClock;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -13,8 +14,11 @@ import java.util.concurrent.TimeUnit;
 import butterknife.BindString;
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import retrofit2.Call;
+import retrofit2.Retrofit;
 import rx.Observable;
 import rx.Subscriber;
+import rx.android.schedulers.AndroidSchedulers;
 import rx.functions.Action1;
 import rx.functions.Func1;
 import rx.schedulers.Schedulers;
@@ -37,7 +41,9 @@ public class MainActivity extends AppCompatActivity {
         if (mMainTv != null)
             mMainTv.setText(title);
 //        rXJavaObserver();
-        rxJavaTranslate();
+//        rxJavaTranslate();
+//        rxJavaThread();
+        retrofit();
     }
 
     private void rXJavaObserver() {
@@ -244,14 +250,56 @@ public class MainActivity extends AppCompatActivity {
     private void rxJavaThread() {
         Observable.create(new Observable.OnSubscribe<String>() {
             @Override
-            public void call(final Subscriber<? super String> sub) {
-                sub.onNext("Hello, world!");
-                sub.onCompleted();
+            public void call(Subscriber<? super String> subscriber) {
+                subscriber.onNext("info1");
+
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                subscriber.onNext("info2-sleep 2s");
+
+                try {
+                    Thread.sleep(3000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                subscriber.onNext("info2-sleep 3s");
+
+                SystemClock.sleep(5000);
+                subscriber.onCompleted();
             }
         })
-                .subscribeOn(Schedulers.io())
-                .subscribe();
+                .subscribeOn(Schedulers.io()) //指定 subscribe() 发生在 IO 线程
+                .observeOn(AndroidSchedulers.mainThread())//指定 Subscriber 主线程中执行，以绘制界面
+                .subscribe(new Subscriber<String>() {
+                    @Override
+                    public void onCompleted() {
+                        Log.v(TAG, "onCompleted()");
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+                        Log.v(TAG, "onError() e=" + e);
+                    }
+
+                    @Override
+                    public void onNext(String s) {
+                        log("子线程" + s);
+                        showToast(s); //UI view显示数据
+                        mMainTv.setText("测试→哈哈");
+                    }
+                });
     }
+    private void retrofit(){
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl("https://api.github.com/")
+                .build();
+        GitHubService service = retrofit.create(GitHubService.class);
+        Call<List<String>> repos = service.listRepos("octocat");
+        log(repos.toString());
+}
 
     private void log(String con) {
         Log.e(TAG, con);
